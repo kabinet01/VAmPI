@@ -212,6 +212,23 @@ class SecurityRegressionTests(unittest.TestCase):
         )
         self.assertEqual(book.status_code, 400)
 
+    def test_database_bootstrap_is_idempotent_and_non_destructive(self):
+        with self.app.app_context():
+            db.drop_all()
+
+        first = self.client.get("/createdb")
+        self.assertEqual(first.status_code, 200)
+        with self.app.app_context():
+            self.assertEqual(User.query.count(), 3)
+            User.register_user("persistent", "persist-pass", "persist@example.com")
+
+        second = self.client.get("/createdb")
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(second.get_json(), first.get_json())
+        with self.app.app_context():
+            self.assertEqual(User.query.count(), 4)
+            self.assertIsNotNone(User.query.filter_by(username="persistent").first())
+
     def test_legacy_plaintext_password_is_upgraded_on_login(self):
         with self.app.app_context():
             user = User.query.filter_by(username="name1").one()

@@ -4,9 +4,9 @@ from models.user_model import *
 from app import vuln
 
 def populate_db():
-    db.drop_all()
     db.create_all()
-    User.init_db_users()
+    if User.query.first() is None:
+        User.init_db_users()
     response_text = '{ "message": "Database populated." }'
     response = Response(response_text, 200, mimetype='application/json')
     return response
