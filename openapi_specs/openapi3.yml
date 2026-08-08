@@ -87,10 +87,12 @@ paths:
                           example: 'name1'
   /users/v1/_debug:
     get:
+      security:
+        - bearerAuth: []
       tags:
         - users
-      summary: Retrieves all details for all users
-      description: Displays all details for all users
+      summary: Retrieves administrative details for all users
+      description: Displays non-credential account details to administrators
       operationId: api_views.users.debug
       responses:
         '200':
@@ -111,9 +113,6 @@ paths:
                         email:
                           type: string
                           example: 'mail1@mail.com'
-                        password:
-                          type: string
-                          example: 'pass1'
                         username:
                           type: string
                           example: 'name1'

@@ -1,11 +1,12 @@
 import datetime
+import hmac
 import jwt
 from sqlalchemy.orm import relationship
 from config import db, vuln_app
-from app import vuln, alive
+from app import alive
 from models.books_model import Book
 from random import randrange
-from sqlalchemy.sql import text
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 class User(db.Model):
@@ -13,7 +14,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, unique=True, autoincrement=True)
     username = db.Column(db.String(128), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
-    email = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(254), nullable=False)
     admin = db.Column(db.Boolean, nullable=False, default=False)
 
     books = relationship("Book", order_by=Book.id, back_populates="user")
@@ -21,8 +22,23 @@ class User(db.Model):
     def __init__(self, username, password, email, admin=False):
         self.username = username
         self.email = email
-        self.password = password
+        self.set_password(password)
         self.admin = admin
+
+    def set_password(self, password):
+        self.password = generate_password_hash(password, method='pbkdf2:sha256')
+
+    def check_password(self, password):
+        if self.password.startswith(('pbkdf2:', 'scrypt:')):
+            return check_password_hash(self.password, password)
+
+        # Preserve compatibility with databases created by older VAmPI versions,
+        # then upgrade the credential after the next successful login.
+        if hmac.compare_digest(self.password, password):
+            self.set_password(password)
+            db.session.commit()
+            return True
+        return False
 
     def __repr__(self):
         return f'{{"username": "{self.username}", "email": "{self.email}"}}'
@@ -56,7 +72,7 @@ class User(db.Model):
         return {'username': self.username, 'email': self.email}
 
     def json_debug(self):
-        return {'username': self.username, 'password': self.password, 'email': self.email, 'admin': self.admin}
+        return {'username': self.username, 'email': self.email, 'admin': self.admin}
 
     @staticmethod
     def get_all_users():
@@ -68,22 +84,14 @@ class User(db.Model):
 
     @staticmethod
     def get_user(username):
-        if vuln:  # SQLi Injection
-            user_query = f"SELECT * FROM users WHERE username = '{username}'"
-            query = db.session.execute(text(user_query))
-            ret = query.fetchone()
-            if ret:
-                fin_query = '{"username": "%s", "email": "%s"}' % (ret[1], ret[3])
-            else:
-                fin_query = None
-        else:
-            fin_query = User.query.filter_by(username=username).first()
-        return fin_query
+        return User.query.filter_by(username=username).first()
 
     @staticmethod
     def register_user(username, password, email, admin=False):
         new_user = User(username=username, password=password, email=email, admin=admin)
         randomint = str(randrange(100))
+        while Book.query.filter_by(book_title="bookTitle" + randomint).first():
+            randomint = str(randrange(100))
         new_user.books = [Book(book_title="bookTitle" + randomint, secret_content="secret for bookTitle" + randomint)]
         db.session.add(new_user)
         db.session.commit()

@@ -1,6 +1,7 @@
 connexion[swagger-ui]==2.14.2
 flask==2.2.2
 flask-sqlalchemy==3.0.3
+Flask-Limiter==2.8.1
 jsonschema==4.17.3
 sqlalchemy==2.0.2
 swagger-ui-bundle

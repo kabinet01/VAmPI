@@ -12,6 +12,6 @@ vuln = int(os.getenv('vulnerable', 1))
 alive = int(os.getenv('tokentimetolive', 60))
 
 
-# start the app with port 5000 and debug on!
+# start the app with port 5000; never expose Flask's development debugger.
 if __name__ == '__main__':
-    vuln_app.run(host='0.0.0.0', port=5000, debug=True)
+    vuln_app.run(host='0.0.0.0', port=5000, debug=False)
