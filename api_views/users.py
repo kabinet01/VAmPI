@@ -68,6 +68,11 @@ def get_by_username(username):
 
 def register_user():
     request_data = request.get_json(silent=True)
+    if isinstance(request_data, dict):
+        request_data = {
+            field: request_data.get(field)
+            for field in ('username', 'password', 'email')
+        }
     try:
         jsonschema.validate(request_data, register_user_schema)
     except jsonschema.exceptions.ValidationError:
